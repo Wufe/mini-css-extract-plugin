@@ -1,27 +1,26 @@
+"use strict";
+
 /* eslint-env browser */
+
 /*
   eslint-disable
   no-console,
   func-names
 */
+var normalizeUrl = require('normalize-url');
 
-const normalizeUrl = require('normalize-url');
-
-const srcByModuleId = Object.create(null);
-
-const noDocument = typeof document === 'undefined';
-
-const { forEach } = Array.prototype;
+var srcByModuleId = Object.create(null);
+var noDocument = typeof document === 'undefined';
+var forEach = Array.prototype.forEach;
 
 function debounce(fn, time) {
-  let timeout = 0;
+  var timeout = 0;
+  return function () {
+    var self = this; // eslint-disable-next-line prefer-rest-params
 
-  return function() {
-    const self = this;
-    // eslint-disable-next-line prefer-rest-params
-    const args = arguments;
+    var args = arguments;
 
-    const functionCall = function functionCall() {
+    var functionCall = function functionCall() {
       return fn.apply(self, args);
     };
 
@@ -33,30 +32,30 @@ function debounce(fn, time) {
 function noop() {}
 
 function getCurrentScriptUrl(moduleId) {
-  let src = srcByModuleId[moduleId];
+  var src = srcByModuleId[moduleId];
 
   if (!src) {
     if (document.currentScript) {
-      ({ src } = document.currentScript);
+      src = document.currentScript.src;
     } else {
-      const scripts = document.getElementsByTagName('script');
-      const lastScriptTag = scripts[scripts.length - 1];
+      var scripts = document.getElementsByTagName('script');
+      var lastScriptTag = scripts[scripts.length - 1];
 
       if (lastScriptTag) {
-        ({ src } = lastScriptTag);
+        src = lastScriptTag.src;
       }
     }
 
     srcByModuleId[moduleId] = src;
   }
 
-  return function(fileMap) {
+  return function (fileMap) {
     if (!src) {
       return null;
     }
 
-    const splitResult = src.split(/([^\\/]+)\.js$/);
-    const filename = splitResult && splitResult[1];
+    var splitResult = src.split(/([^\\/]+)\.js$/);
+    var filename = splitResult && splitResult[1];
 
     if (!filename) {
       return [src.replace('.js', '.css')];
@@ -66,13 +65,11 @@ function getCurrentScriptUrl(moduleId) {
       return [src.replace('.js', '.css')];
     }
 
-    return fileMap.split(',').map((mapRule) => {
-      const reg = new RegExp(`${filename}\\.js$`, 'g');
-
-      return normalizeUrl(
-        src.replace(reg, `${mapRule.replace(/{fileName}/g, filename)}.css`),
-        { stripWWW: false }
-      );
+    return fileMap.split(',').map(function (mapRule) {
+      var reg = new RegExp("".concat(filename, "\\.js$"), 'g');
+      return normalizeUrl(src.replace(reg, "".concat(mapRule.replace(/{fileName}/g, filename), ".css")), {
+        stripWWW: false
+      });
     });
   };
 }
@@ -81,10 +78,10 @@ function updateCss(el, url) {
   if (!url) {
     if (!el.href) {
       return;
-    }
+    } // eslint-disable-next-line
 
-    // eslint-disable-next-line
-        url = el.href.split('?')[0];
+
+    url = el.href.split('?')[0];
   }
 
   if (!isUrlRequest(url)) {
@@ -99,26 +96,21 @@ function updateCss(el, url) {
 
   if (!url || !(url.indexOf('.css') > -1)) {
     return;
-  }
+  } // eslint-disable-next-line no-param-reassign
 
-  // eslint-disable-next-line no-param-reassign
+
   el.visited = true;
-
-  const newEl = el.cloneNode();
-
+  var newEl = el.cloneNode();
   newEl.isLoaded = false;
-
-  newEl.addEventListener('load', () => {
+  newEl.addEventListener('load', function () {
     newEl.isLoaded = true;
     el.parentNode.removeChild(el);
   });
-
-  newEl.addEventListener('error', () => {
+  newEl.addEventListener('error', function () {
     newEl.isLoaded = true;
     el.parentNode.removeChild(el);
   });
-
-  newEl.href = `${url}?${Date.now()}`;
+  newEl.href = "".concat(url, "?").concat(Date.now());
 
   if (el.nextSibling) {
     el.parentNode.insertBefore(newEl, el.nextSibling);
@@ -128,31 +120,29 @@ function updateCss(el, url) {
 }
 
 function getReloadUrl(href, src) {
-  let ret;
+  var ret; // eslint-disable-next-line no-param-reassign
 
-  // eslint-disable-next-line no-param-reassign
-  href = normalizeUrl(href, { stripWWW: false });
+  href = normalizeUrl(href, {
+    stripWWW: false
+  }); // eslint-disable-next-line array-callback-return
 
-  // eslint-disable-next-line array-callback-return
-  src.some((url) => {
+  src.some(function (url) {
     if (href.indexOf(src) > -1) {
       ret = url;
     }
   });
-
   return ret;
 }
 
 function reloadStyle(src) {
-  const elements = document.querySelectorAll('link');
-  let loaded = false;
-
-  forEach.call(elements, (el) => {
+  var elements = document.querySelectorAll('link');
+  var loaded = false;
+  forEach.call(elements, function (el) {
     if (!el.href) {
       return;
     }
 
-    const url = getReloadUrl(el.href, src);
+    var url = getReloadUrl(el.href, src);
 
     if (!isUrlRequest(url)) {
       return;
@@ -164,18 +154,15 @@ function reloadStyle(src) {
 
     if (url) {
       updateCss(el, url);
-
       loaded = true;
     }
   });
-
   return loaded;
 }
 
 function reloadAll() {
-  const elements = document.querySelectorAll('link');
-
-  forEach.call(elements, (el) => {
+  var elements = document.querySelectorAll('link');
+  forEach.call(elements, function (el) {
     if (el.visited === true) {
       return;
     }
@@ -186,7 +173,6 @@ function reloadAll() {
 
 function isUrlRequest(url) {
   // An URL is not an request if
-
   // It is not http or https
   if (!/^https?:/i.test(url)) {
     return false;
@@ -195,28 +181,27 @@ function isUrlRequest(url) {
   return true;
 }
 
-module.exports = function(moduleId, options) {
+module.exports = function (moduleId, options) {
   if (noDocument) {
     console.log('no window.document found, will not HMR CSS');
-
     return noop;
   }
 
-  const getScriptSrc = getCurrentScriptUrl(moduleId);
+  var getScriptSrc = getCurrentScriptUrl(moduleId);
 
   function update() {
-    const src = getScriptSrc(options.filename);
+    var src = getScriptSrc(options.filename);
+
     if (!src) {
       console.log('[HMR] Could not get script src.');
       return;
     }
-    const reloaded = reloadStyle(src);
+
+    var reloaded = reloadStyle(src);
 
     if (options.locals) {
       console.log('[HMR] Detected local css modules. Reload all css');
-
       reloadAll();
-
       return;
     }
 
@@ -224,7 +209,6 @@ module.exports = function(moduleId, options) {
       console.log('[HMR] css reload %s', src.join(' '));
     } else {
       console.log('[HMR] Reload all css');
-
       reloadAll();
     }
   }
